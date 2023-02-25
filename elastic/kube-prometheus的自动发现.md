@@ -50,6 +50,44 @@
     target_label: __scheme__
     replacement: $1
     action: replace
+    
+    
+    
+- job_name: kubernetes-service-endpoints
+  kubernetes_sd_configs:
+  - role: endpoints
+  relabel_configs:
+  - action: keep
+    regex: true
+    source_labels:
+    - __meta_kubernetes_service_annotation_prometheus_io_scrape
+  - action: replace
+    regex: (https?)
+    source_labels:
+    - __meta_kubernetes_service_annotation_prometheus_io_scheme
+    target_label: __scheme__
+  - action: replace
+    regex: (.+)
+    source_labels:
+    - __meta_kubernetes_service_annotation_prometheus_io_path
+    target_label: __metrics_path__
+  - action: replace
+    regex: ([^:]+)(?::\d+)?;(\d+)
+    replacement: $1:$2
+    source_labels:
+    - __address__
+    - __meta_kubernetes_service_annotation_prometheus_io_port
+    target_label: __address__
+  - action: labelmap
+    regex: __meta_kubernetes_service_label_(.+)
+  - action: replace
+    source_labels:
+    - __meta_kubernetes_namespace
+    target_label: kubernetes_namespace
+  - action: replace
+    source_labels:
+    - __meta_kubernetes_service_name
+    target_label: kubernetes_name    
 ```
 
 要想自动发现集群中的 pod，就需要我们在 deployment template 的`annotation`区域添加`prometheus.io/scrape=true`的声明，将上面文件直接保存为 prometheus-additional.yaml，然后通过这个文件创建一个对应的 Secret 对象
